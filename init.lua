@@ -198,7 +198,10 @@ vim.diagnostic.config {
   virtual_lines = false, -- Text shows up underneath the line, with virtual lines
 
   -- Auto open the float, so you can easily read the errors when jumping with `[d` and `]d`
-  jump = { float = true },
+  -- ARJUN: float=true is deprecated as of 0.12, on_jump is the replacement
+  jump = {
+    on_jump = function(_, bufnr) vim.diagnostic.open_float(nil, { buffer = bufnr }) end,
+  },
 }
 
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
@@ -236,15 +239,16 @@ vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper win
 -- not wherever your shell rc file's `cd` sends a fresh shell (this is the
 -- exact bug we hit -- `:terminal` opening in $HOME instead of your project).
 -- <leader>tt = vertical split terminal, <leader>tT = horizontal split terminal
-vim.keymap.set('n', '<leader>tt', function()
+local function open_terminal_here(split_cmd)
   local dir = vim.fn.expand '%:p:h'
-  vim.cmd('vsplit | lcd ' .. vim.fn.fnameescape(dir) .. ' | terminal')
-end, { desc = '[T]erminal (vertical, here)' })
+  if dir == '' then dir = vim.fn.getcwd() end
+  vim.cmd(split_cmd) -- open the split first
+  vim.cmd('lcd ' .. vim.fn.fnameescape(dir)) -- cd the NEW window to the file's dir
+  vim.cmd 'terminal' -- now start the shell, as its own command
+end
 
-vim.keymap.set('n', '<leader>tT', function()
-  local dir = vim.fn.expand '%:p:h'
-  vim.cmd('split | lcd ' .. vim.fn.fnameescape(dir) .. ' | terminal')
-end, { desc = '[T]erminal (horizontal, here)' })
+vim.keymap.set('n', '<leader>tt', function() open_terminal_here 'vsplit' end, { desc = '[T]erminal (vertical, here)' })
+vim.keymap.set('n', '<leader>tT', function() open_terminal_here 'split' end, { desc = '[T]erminal (horizontal, here)' })
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
